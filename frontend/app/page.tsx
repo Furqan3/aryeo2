@@ -1,12 +1,83 @@
-import { auth } from "@/lib/auth/config"
+"use client"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Sparkles, ArrowRight, Zap, Shield } from "lucide-react"
-import Link from "next/link"
+import { Sparkles, CheckCircle2 } from "lucide-react"
+import { StepOne } from "@/components/step-one"
+import { SimplePosterEditor } from "@/components/simple-poster-editor"
+import { StepThree } from "@/components/step-three"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserNav } from "@/components/dashboard/user-nav"
+import { saveProjectCache, getProjectCache, clearProjectCache } from "@/lib/cache/project-cache"
 
-export default async function Home() {
-  const session = await auth()
+export default function Home() {
+  const [currentStep, setCurrentStep] = useState(1)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [images, setImages] = useState<string[]>([])
+  const [selectedHero, setSelectedHero] = useState<string | null>(null)
+  const [selectedDetails, setSelectedDetails] = useState<string[]>([])
+  const [propertyInfo, setPropertyInfo] = useState<any>(null)
+  const [projectId, setProjectId] = useState<string | undefined>(undefined)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load cached state on mount
+  useEffect(() => {
+    const cached = getProjectCache()
+    if (cached.currentStep > 1 || cached.propertyInfo || cached.canvasData) {
+      setCurrentStep(cached.currentStep)
+      setSessionId(cached.sessionId)
+      setImages(cached.images)
+      setSelectedHero(cached.selectedHero)
+      setSelectedDetails(cached.selectedDetails)
+      setPropertyInfo(cached.propertyInfo)
+      setProjectId(cached.projectId)
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Save state to cache whenever it changes
+  useEffect(() => {
+    if (!isLoaded) return
+    saveProjectCache({
+      currentStep,
+      sessionId,
+      images,
+      selectedHero,
+      selectedDetails,
+      propertyInfo,
+      projectId,
+    })
+  }, [currentStep, sessionId, images, selectedHero, selectedDetails, propertyInfo, projectId, isLoaded])
+
+  const handleScrapeComplete = (data: { session_id: string; images: string[]; propertyInfo?: any }) => {
+    setSessionId(data.session_id)
+    setImages(data.images || [])
+    if (data.propertyInfo) {
+      setPropertyInfo(data.propertyInfo)
+    }
+    setCurrentStep(2)
+  }
+
+  const handlePropertySubmit = (info: any) => {
+    setPropertyInfo(info)
+    setCurrentStep(3)
+  }
+
+  const handlePosterComplete = (hero: string, details: string[]) => {
+    setSelectedHero(hero)
+    setSelectedDetails(details)
+  }
+
+  const resetFlow = () => {
+    setCurrentStep(1)
+    setSessionId(null)
+    setImages([])
+    setSelectedHero(null)
+    setSelectedDetails([])
+    setPropertyInfo(null)
+    setProjectId(undefined)
+    clearProjectCache()
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -21,86 +92,79 @@ export default async function Home() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            {session?.user ? (
-              <UserNav />
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost">Sign In</Button>
-                </Link>
-                <Link href="/register">
-                  <Button>Get Started</Button>
-                </Link>
-              </>
+            <UserNav />
+            {currentStep > 1 && (
+              <Button variant="outline" size="sm" onClick={resetFlow}>
+                Start Over
+              </Button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-medium">AI-Powered Real Estate Content</span>
+      {/* Progress Steps */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-12">
+            {[
+              { num: 1, label: "Scrape Listing", description: "Enter listing URL" },
+              { num: 2, label: "Property Details", description: "Confirm information" },
+              { num: 3, label: "Create Content", description: "Design your post" },
+            ].map((step, idx) => (
+              <div key={step.num} className="flex items-center flex-1">
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all border-2 ${
+                      currentStep > step.num
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : currentStep === step.num
+                          ? "bg-primary/10 border-primary text-primary"
+                          : "bg-secondary border-border text-muted-foreground"
+                    }`}
+                  >
+                    {currentStep > step.num ? <CheckCircle2 className="w-5 h-5" /> : step.num}
+                  </div>
+                  <span
+                    className={`text-sm font-medium mt-3 ${currentStep >= step.num ? "text-foreground" : "text-muted-foreground"}`}
+                  >
+                    {step.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground mt-1">{step.description}</span>
+                </div>
+                {idx < 2 && (
+                  <div
+                    className={`h-0.5 w-full max-w-[100px] mx-4 transition-all rounded-full ${
+                      currentStep > step.num ? "bg-primary" : "bg-border"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-            Create Stunning Real Estate{" "}
-            <span className="text-primary">Social Media Posts</span> in Minutes
-          </h1>
-
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Transform your property listings into eye-catching social media content. Simply import from Aryeo and let our AI-powered editor do the rest.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href={session?.user ? "/dashboard" : "/register"}>
-              <Button size="lg" className="text-lg px-8">
-                {session?.user ? "Go to Dashboard" : "Start Creating Free"}
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-            {!session?.user && (
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="text-lg px-8">
-                  Sign In
-                </Button>
-              </Link>
+          {/* Step Content */}
+          <div id="step-one" className="min-h-[500px]">
+            {currentStep === 1 && <StepOne onComplete={handleScrapeComplete} />}
+            {currentStep === 2 && sessionId && (
+              <StepThree
+                initialData={propertyInfo}
+                onComplete={handlePropertySubmit}
+                onBack={() => setCurrentStep(1)}
+              />
             )}
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-8 mt-20 max-w-5xl mx-auto">
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Lightning Fast</h3>
-            <p className="text-muted-foreground">
-              Import listings from Aryeo and create stunning posts in minutes, not hours.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">AI-Powered Design</h3>
-            <p className="text-muted-foreground">
-              Beautiful templates and smart editing tools that make you look like a pro designer.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Your Projects, Secure</h3>
-            <p className="text-muted-foreground">
-              All your projects are saved securely in the cloud and accessible from anywhere.
-            </p>
+            {currentStep === 3 && propertyInfo && (
+              <SimplePosterEditor
+                images={images}
+                propertyInfo={propertyInfo}
+                onComplete={handlePosterComplete}
+                onBack={() => setCurrentStep(2)}
+                projectId={projectId}
+                onProjectIdChange={setProjectId}
+                onCanvasChange={(canvasData) => {
+                  saveProjectCache({ canvasData })
+                }}
+              />
+            )}
           </div>
         </div>
       </div>

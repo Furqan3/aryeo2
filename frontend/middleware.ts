@@ -11,18 +11,15 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = !!sessionToken
 
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
-  const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/projects')
 
-  // Redirect unauthenticated users to login
-  if (isProtectedRoute && !isAuthenticated) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('callbackUrl', pathname)
-    return NextResponse.redirect(loginUrl)
+  // Redirect authenticated users away from auth pages to main page
+  if (isAuthPage && isAuthenticated) {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Redirect authenticated users away from auth pages
-  if (isAuthPage && isAuthenticated) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // Redirect unauthenticated users to login (only from root if they're not authenticated)
+  if (pathname === '/' && !isAuthenticated) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return NextResponse.next()

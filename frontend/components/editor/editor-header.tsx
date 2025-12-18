@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Undo2, Redo2, Download, FolderOpen, ChevronLeft, FileDown, FileJson, ImageIcon } from "lucide-react"
+import { Undo2, Redo2, Download, FolderOpen, ChevronLeft, FileDown, FileJson, ImageIcon, Loader2, Check } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { formatDistanceToNow } from "date-fns"
 
 interface EditorHeaderProps {
   projectName?: string
@@ -22,6 +23,8 @@ interface EditorHeaderProps {
   onExport: () => void
   onExportJPG?: () => void
   onBack: () => void
+  isSaving?: boolean
+  lastSaved?: Date | null
 }
 
 export function EditorHeader({
@@ -35,6 +38,8 @@ export function EditorHeader({
   onExport,
   onExportJPG,
   onBack,
+  isSaving,
+  lastSaved,
 }: EditorHeaderProps) {
   return (
     <header className="h-12 bg-[#1a1a1a] border-b border-[#333] flex items-center justify-between px-3 shrink-0">
@@ -53,6 +58,23 @@ export function EditorHeader({
         <Separator orientation="vertical" className="h-5 bg-zinc-700" />
 
         <span className="font-medium text-sm text-white">{projectName}</span>
+
+        {/* Save status indicator */}
+        {(isSaving || lastSaved) && (
+          <div className="flex items-center gap-1.5 ml-3 text-xs text-zinc-400">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : lastSaved ? (
+              <>
+                <Check className="h-3 w-3" />
+                <span>Saved {formatDistanceToNow(lastSaved, { addSuffix: true })}</span>
+              </>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Center section - History */}

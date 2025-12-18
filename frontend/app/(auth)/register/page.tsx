@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui/card"
 import { RegisterForm } from "@/components/auth/register-form"
-import { SocialAuth } from "@/components/auth/social-auth"
 
 export default function RegisterPage() {
   return (
@@ -13,10 +12,6 @@ export default function RegisterPage() {
       </div>
 
       <RegisterForm />
-
-      <div className="mt-6">
-        <SocialAuth />
-      </div>
     </Card>
   )
 }

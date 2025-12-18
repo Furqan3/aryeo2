@@ -62,18 +62,22 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
   }
 
   return (
-    <Card className="p-8 gradient-card border-border">
+    <Card className="p-8 border-border bg-card">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold mb-3">Property Details</h2>
-        <p className="text-muted-foreground">
-          {isPreFilled ? "Review and edit the property information below" : "Enter the property information to generate your social media post"}
+        <h2 className="text-3xl font-bold mb-2 text-balance">Property Details</h2>
+        <p className="text-muted-foreground text-pretty">
+          {isPreFilled
+            ? "Review and edit the property information below"
+            : "Enter the property information to generate your social media post"}
         </p>
         {isPreFilled && (
-          <div className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg mt-4">
-            <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg mt-4">
+            <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-blue-500">Form Pre-filled</p>
-              <p className="text-sm text-blue-400/90">We've automatically filled in the property details from the listing. You can edit any field below.</p>
+              <p className="text-sm font-semibold text-primary">Form Pre-filled</p>
+              <p className="text-sm text-primary/90">
+                We've automatically filled in the property details. You can edit any field below.
+              </p>
             </div>
           </div>
         )}
@@ -82,8 +86,10 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid md:grid-cols-2 gap-6">
           {/* Price */}
-          <div>
-            <Label htmlFor="price">Price *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="price" className="text-sm font-medium">
+              Price *
+            </Label>
             <Input
               id="price"
               name="price"
@@ -91,13 +97,15 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.price}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* Bedrooms */}
-          <div>
-            <Label htmlFor="bedrooms">Bedrooms *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="bedrooms" className="text-sm font-medium">
+              Bedrooms *
+            </Label>
             <Input
               id="bedrooms"
               name="bedrooms"
@@ -107,30 +115,34 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.bedrooms}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* Bathrooms */}
-          <div>
-            <Label htmlFor="bathrooms">Bathrooms *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="bathrooms" className="text-sm font-medium">
+              Bathrooms *
+            </Label>
             <Input
               id="bathrooms"
               name="bathrooms"
               type="number"
-              step="0.5"
+              step="1"
               min="0"
-              placeholder="2.5"
+              placeholder="0"
               value={formData.bathrooms}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* Square Feet */}
-          <div>
-            <Label htmlFor="square_feet">Square Feet *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="square_feet" className="text-sm font-medium">
+              Square Feet *
+            </Label>
             <Input
               id="square_feet"
               name="square_feet"
@@ -140,13 +152,15 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.square_feet}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* Address */}
-          <div className="md:col-span-2">
-            <Label htmlFor="address">Street Address *</Label>
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor="address" className="text-sm font-medium">
+              Street Address *
+            </Label>
             <Input
               id="address"
               name="address"
@@ -154,13 +168,15 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.address}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* City */}
-          <div>
-            <Label htmlFor="city">City *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="city" className="text-sm font-medium">
+              City *
+            </Label>
             <Input
               id="city"
               name="city"
@@ -168,13 +184,15 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.city}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* State */}
-          <div>
-            <Label htmlFor="state">State *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="state" className="text-sm font-medium">
+              State *
+            </Label>
             <Input
               id="state"
               name="state"
@@ -183,13 +201,15 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.state}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11 uppercase"
             />
           </div>
 
           {/* Zip Code */}
-          <div>
-            <Label htmlFor="zip_code">Zip Code *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="zip_code" className="text-sm font-medium">
+              Zip Code *
+            </Label>
             <Input
               id="zip_code"
               name="zip_code"
@@ -197,19 +217,21 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               value={formData.zip_code}
               onChange={handleChange}
               required
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* Property Type */}
-          <div>
-            <Label htmlFor="property_type">Property Type</Label>
+          <div className="space-y-2">
+            <Label htmlFor="property_type" className="text-sm font-medium">
+              Property Type
+            </Label>
             <select
               id="property_type"
               name="property_type"
               value={formData.property_type}
               onChange={handleChange}
-              className="mt-1.5 w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+              className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option>Single Family Home</option>
               <option>Condo</option>
@@ -221,8 +243,10 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
           </div>
 
           {/* Year Built */}
-          <div>
-            <Label htmlFor="year_built">Year Built</Label>
+          <div className="space-y-2">
+            <Label htmlFor="year_built" className="text-sm font-medium">
+              Year Built
+            </Label>
             <Input
               id="year_built"
               name="year_built"
@@ -232,30 +256,32 @@ export function StepThree({ initialData, onComplete, onBack }: StepThreeProps) {
               placeholder="2020"
               value={formData.year_built}
               onChange={handleChange}
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
 
           {/* Lot Size */}
-          <div>
-            <Label htmlFor="lot_size">Lot Size</Label>
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor="lot_size" className="text-sm font-medium">
+              Lot Size
+            </Label>
             <Input
               id="lot_size"
               name="lot_size"
               placeholder="0.25 acres"
               value={formData.lot_size}
               onChange={handleChange}
-              className="mt-1.5 bg-background"
+              className="h-11"
             />
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex gap-4 pt-4">
-          <Button type="button" variant="outline" onClick={onBack} size="lg" className="flex-1 bg-transparent">
+          <Button type="button" variant="outline" onClick={onBack} size="lg" className="flex-1 h-12 bg-transparent">
             Back
           </Button>
-          <Button type="submit" size="lg" className="flex-1 bg-primary hover:bg-primary/90">
+          <Button type="submit" size="lg" className="flex-1 h-12">
             Continue to Design
           </Button>
         </div>

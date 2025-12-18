@@ -28,7 +28,7 @@ export const applyMinimalTemplate = async (
   const { width, height } = canvasSize
 
   // 1. Full-width hero image
-  await createImageFrame(canvas, fabricLib, images[0] || '', 0, 0, width, height, { objectFit: 'cover' })
+  await createImageFrame(canvas, fabricLib, images[0] || '', 0, 0, width, height, { cornerRadius: 0 })
 
   // 2. Dark gradient overlay for maximum text readability
   const overlayGradient = new fabricLib.Gradient({

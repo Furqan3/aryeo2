@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useToast } from "@/components/ui/use-toast"
+import { useAutoSave } from "@/hooks/use-auto-save"
 
 // Editor components
 import { EditorHeader } from "@/components/editor/editor-header"
@@ -33,9 +34,12 @@ interface PosterEditorProps {
   propertyInfo: any
   onComplete: (hero: string, details: string[]) => void
   onBack: () => void
+  projectId?: string
+  onProjectIdChange?: (projectId: string) => void
+  onCanvasChange?: (canvasData: any) => void
 }
 
-export function PosterEditor({ images, propertyInfo, onComplete, onBack }: PosterEditorProps) {
+export function PosterEditor({ images, propertyInfo, onComplete, onBack, projectId, onProjectIdChange, onCanvasChange }: PosterEditorProps) {
   const canvasWorkspaceRef = useRef<CanvasWorkspaceRef>(null)
   const { toast } = useToast()
   const canvasRef = useRef<any>(null)
@@ -53,6 +57,50 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
   // Custom hooks
   const { saveToHistory, undo, redo, canUndo, canRedo } = useCanvasHistory()
   const { layers, updateLayers, selectLayer, toggleLayerVisibility, moveLayer, reorderLayers } = useLayers()
+
+  // Auto-save hook
+  const handleSaveProject = useCallback(async (data: any) => {
+    try {
+      // If no projectId exists, create a new project
+      if (!projectId) {
+        const response = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            propertyInfo,
+            images,
+            ...data,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to create project')
+        }
+
+        const result = await response.json()
+        if (result.project?.id && onProjectIdChange) {
+          onProjectIdChange(result.project.id)
+        }
+        return
+      }
+
+      // Update existing project
+      await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+    } catch (error) {
+      console.error('Failed to save project:', error)
+      throw error
+    }
+  }, [projectId, propertyInfo, images, onProjectIdChange])
+
+  const { debouncedSave, isSaving, lastSaved } = useAutoSave({
+    projectId,
+    onSave: handleSaveProject,
+    debounceMs: 3000, // Save 3 seconds after last change
+  })
 
   // Load Fabric.js from CDN
   useEffect(() => {
@@ -104,7 +152,18 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
       fabricCanvas.on("selection:created", (e: any) => setActiveObject(e.selected[0]))
       fabricCanvas.on("selection:updated", (e: any) => setActiveObject(e.selected[0]))
       fabricCanvas.on("selection:cleared", () => setActiveObject(null))
-      fabricCanvas.on("object:modified", () => saveToHistory(fabricCanvas))
+      fabricCanvas.on("object:modified", () => {
+        saveToHistory(fabricCanvas)
+        const canvasData = fabricCanvas.toJSON()
+        // Trigger auto-save to database
+        if (projectId) {
+          debouncedSave({ canvasData })
+        }
+        // Save to cache
+        if (onCanvasChange) {
+          onCanvasChange(canvasData)
+        }
+      })
       fabricCanvas.on("object:added", () => updateLayers(fabricCanvas))
       fabricCanvas.on("object:removed", () => updateLayers(fabricCanvas))
 
@@ -112,8 +171,25 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
       setLoading(false)
       setTimeout(() => saveToHistory(fabricCanvas), 100)
     },
-    [saveToHistory, updateLayers],
+    [saveToHistory, updateLayers, projectId, debouncedSave, onCanvasChange],
   )
+
+  // Restore canvas data from cache on mount
+  useEffect(() => {
+    if (!canvas) return
+
+    // Load from cache
+    const { getProjectCache } = require("@/lib/cache/project-cache")
+    const cached = getProjectCache()
+
+    if (cached.canvasData) {
+      canvas.loadFromJSON(cached.canvasData, () => {
+        canvas.renderAll()
+        updateLayers(canvas)
+        saveToHistory(canvas)
+      })
+    }
+  }, [canvas, updateLayers, saveToHistory])
 
   const handleUndo = useCallback(() => {
     undo(canvas, () => updateLayers(canvas))
@@ -173,7 +249,7 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
       if (!canvas) return
       const fabricLib = (window as any).fabric
 
-      createImageFrame(canvas, fabricLib, imageUrl, 100, 100, 300, 300)
+      createImageFrame(canvas, fabricLib, imageUrl, 100, 100, 300, 300, { cornerRadius: 0 })
       saveToHistory(canvas)
     },
     [canvas, saveToHistory],
@@ -227,11 +303,6 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
       }
     },
     [canvas, saveToHistory],
-  )
-
-  const debouncedSave = useCallback(
-    debounce((c: any) => saveToHistory(c), 400),
-    [saveToHistory],
   )
 
   const updateObjectProperty = useCallback(
@@ -542,6 +613,8 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
         onExport={downloadPoster}
         onExportJPG={downloadPosterJPG}
         onBack={onBack}
+        isSaving={isSaving}
+        lastSaved={lastSaved}
       />
 
       {/* Toolbar */}
@@ -601,10 +674,6 @@ export function PosterEditor({ images, propertyInfo, onComplete, onBack }: Poste
           onSelectLayer={(index) => selectLayer(canvas, index, setActiveObject)}
           onToggleVisibility={(index) => {
             toggleLayerVisibility(canvas, index)
-            updateLayers(canvas)
-          }}
-          onMoveLayer={(index, direction) => {
-            moveLayer(canvas, index, direction)
             updateLayers(canvas)
           }}
           onReorderLayers={(newLayers) => {

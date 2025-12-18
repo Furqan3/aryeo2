@@ -4,9 +4,107 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ImageGallery } from "@/components/editor/image-gallery"
 import { PropertiesPanel } from "@/components/editor/properties-panel"
-import { ImageIcon, Settings2, Layers, Eye, EyeOff, ChevronUp, ChevronDown, Palette } from "lucide-react"
+import {
+  ImageIcon,
+  Settings2,
+  Layers,
+  Eye,
+  EyeOff,
+  GripVertical,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import {
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+
+// Sortable Layer Item Component
+function SortableLayerItem({
+  layer,
+  index,
+  isActive,
+  isVisible,
+  onSelectLayer,
+  onToggleVisibility,
+}: {
+  layer: any
+  index: number
+  isActive: boolean
+  isVisible: boolean
+  onSelectLayer: (index: number) => void
+  onToggleVisibility: (index: number) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: index })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+        isActive ? "bg-accent" : "hover:bg-accent/50",
+        isDragging && "z-50"
+      )}
+      onClick={() => onSelectLayer(index)}
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleVisibility(index)
+        }}
+      >
+        {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+      </Button>
+
+      <div className="flex-1 text-sm truncate">
+        {layer.name || `Layer ${index + 1}`}
+      </div>
+    </div>
+  )
+}
 
 interface RightPanelProps {
   images: string[]
@@ -16,8 +114,7 @@ interface RightPanelProps {
   onReplaceImage: (image: string) => void
   onSelectLayer: (index: number) => void
   onToggleVisibility: (index: number) => void
-  onMoveLayer: (index: number, direction: "up" | "down") => void
-  onReorderLayers: (layers: any[]) => void
+  onReorderLayers: (newLayers: any[]) => void
   onUpdateProperty: (property: string, value: any) => void
   onDeleteObject: () => void
 }
@@ -30,11 +127,38 @@ export function RightPanel({
   onReplaceImage,
   onSelectLayer,
   onToggleVisibility,
-  onMoveLayer,
+  onReorderLayers,
   onUpdateProperty,
   onDeleteObject,
 }: RightPanelProps) {
   const isImageSelected = activeObject?.type === "image"
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Prevents accidental drags
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = Number(active.id)
+      const newIndex = Number(over.id)
+
+      const newLayers = arrayMove(layers, oldIndex, newIndex)
+      onReorderLayers(newLayers)
+    }
+  }
+
+  // Reverse layers for display (top layer at top of list)
+  const displayedLayers = [...layers].reverse()
+  const layerIds = displayedLayers.map((_, i) => layers.length - 1 - i) // original indices
 
   return (
     <div className="w-80 bg-sidebar border-l border-border flex flex-col h-full">
@@ -76,10 +200,12 @@ export function RightPanel({
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                <Palette className="w-6 h-6 text-muted-foreground" />
+                <Settings2 className="w-6 h-6 text-muted-foreground" />
               </div>
               <p className="text-sm font-medium mb-1">No element selected</p>
-              <p className="text-xs text-muted-foreground">Click on an element to edit its properties</p>
+              <p className="text-xs text-muted-foreground">
+                Click on an element to edit its properties
+              </p>
             </div>
           )}
         </TabsContent>
@@ -94,71 +220,42 @@ export function RightPanel({
 
         <TabsContent value="layers" className="mt-0 flex-1 flex flex-col">
           <ScrollArea className="flex-1 px-4">
-            <div className="py-4 space-y-2">
+            <div className="py-4">
               {layers.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground py-8">
                   No layers yet
                 </p>
               ) : (
-                [...layers].reverse().map((layer, reversedIndex) => {
-                  const index = layers.length - 1 - reversedIndex // original index (top = highest)
-                  const isActive = activeObject === layer
-                  const isVisible = layer.visible !== false
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={layerIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {displayedLayers.map((layer, reversedIndex) => {
+                        const originalIndex = layers.length - 1 - reversedIndex
+                        const isActive = activeObject === layer
+                        const isVisible = layer.visible !== false
 
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
-                        isActive ? "bg-accent" : "hover:bg-accent/50"
-                      )}
-                      onClick={() => onSelectLayer(index)}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onToggleVisibility(index)
-                        }}
-                      >
-                        {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                      </Button>
-
-                      <div className="flex-1 text-sm truncate">
-                        {layer.name || `Layer ${index + 1}`}
-                      </div>
-
-                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          disabled={index === layers.length - 1}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onMoveLayer(index, "up")
-                          }}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          disabled={index === 0}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onMoveLayer(index, "down")
-                          }}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        return (
+                          <SortableLayerItem
+                            key={originalIndex}
+                            layer={layer}
+                            index={originalIndex}
+                            isActive={isActive}
+                            isVisible={isVisible}
+                            onSelectLayer={onSelectLayer}
+                            onToggleVisibility={onToggleVisibility}
+                          />
+                        )
+                      })}
                     </div>
-                  )
-                })
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           </ScrollArea>
