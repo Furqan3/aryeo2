@@ -20,14 +20,7 @@ export const debounce = (func: (...args: any[]) => void, delay: number) => {
  * Create an image frame on the canvas
  */
 export const createImageFrame = (
-  canvas: any,
-  fabricLib: any,
-  imageUrl: string,
-  left: number,
-  top: number,
-  width: number,
-  height: number
-) => {
+canvas: any, fabricLib: any, imageUrl: string, left: number, top: number, width: number, height: number, p0: { cornerRadius: number }) => {
   return new Promise<any>((resolve) => {
     fabricLib.Image.fromURL(
       imageUrl,
